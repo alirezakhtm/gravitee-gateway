@@ -29,7 +29,9 @@ import io.gravitee.gateway.policy.spring.PolicyConfiguration;
 import io.gravitee.gateway.reactor.spring.ReactorConfiguration;
 import io.gravitee.gateway.report.spring.ReporterConfiguration;
 import io.gravitee.gateway.standalone.node.GatewayNode;
+import io.gravitee.gateway.standalone.node.GatewayNodeMetadataResolver;
 import io.gravitee.gateway.standalone.vertx.VertxReactorConfiguration;
+import io.gravitee.node.api.NodeMetadataResolver;
 import io.gravitee.node.cluster.spring.ClusterConfiguration;
 import io.gravitee.node.container.NodeFactory;
 import io.gravitee.node.vertx.spring.VertxConfiguration;
@@ -93,5 +95,10 @@ public class StandaloneConfiguration {
     @Bean
     public static GatewayConfiguration gatewayConfiguration() {
         return new GatewayConfiguration();
+    }
+
+    @Bean
+    public NodeMetadataResolver nodeMetadataResolver() {
+        return new GatewayNodeMetadataResolver();
     }
 }

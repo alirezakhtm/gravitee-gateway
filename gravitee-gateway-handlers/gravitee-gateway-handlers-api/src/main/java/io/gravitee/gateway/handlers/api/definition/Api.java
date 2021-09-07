@@ -40,6 +40,11 @@ public class Api extends io.gravitee.definition.model.Api implements Reactable, 
     private boolean enabled = true;
     private Date deployedAt;
 
+    private String environmentId;
+    private String environmentHrid;
+    private String organizationId;
+    private String organizationHrid;
+
     private DefinitionContext definitionContext = new DefinitionContext();
 
     public Api() {}
@@ -243,6 +248,38 @@ public class Api extends io.gravitee.definition.model.Api implements Reactable, 
             .stream()
             .map(virtualHost -> new VirtualHost(virtualHost.getHost(), virtualHost.getPath()))
             .collect(Collectors.toList());
+    }
+
+    public String getEnvironmentId() {
+        return environmentId;
+    }
+
+    public void setEnvironmentId(String environmentId) {
+        this.environmentId = environmentId;
+    }
+
+    public String getEnvironmentHrid() {
+        return environmentHrid;
+    }
+
+    public void setEnvironmentHrid(String environmentHrid) {
+        this.environmentHrid = environmentHrid;
+    }
+
+    public String getOrganizationId() {
+        return organizationId;
+    }
+
+    public void setOrganizationId(String organizationId) {
+        this.organizationId = organizationId;
+    }
+
+    public String getOrganizationHrid() {
+        return organizationHrid;
+    }
+
+    public void setOrganizationHrid(String organizationHrid) {
+        this.organizationHrid = organizationHrid;
     }
 
     @Override

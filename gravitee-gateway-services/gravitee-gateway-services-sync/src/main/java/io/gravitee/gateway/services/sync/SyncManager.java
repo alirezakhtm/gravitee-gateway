@@ -41,6 +41,7 @@ import io.gravitee.repository.management.api.search.ApiCriteria;
 import io.gravitee.repository.management.api.search.ApiFieldExclusionFilter;
 import io.gravitee.repository.management.api.search.EventCriteria;
 import io.gravitee.repository.management.api.search.builder.PageableBuilder;
+import io.gravitee.repository.management.model.Environment;
 import io.gravitee.repository.management.model.Event;
 import io.gravitee.repository.management.model.EventType;
 import io.gravitee.repository.management.model.LifecycleState;
@@ -98,10 +99,16 @@ public class SyncManager {
     private OrganizationRepository organizationRepository;
 
     @Autowired
+    private EnvironmentRepository environmentRepository;
+
+    @Autowired
     private GatewayConfiguration gatewayConfiguration;
 
     @Autowired
     protected EventManager eventManager;
+
+    private Map<String, Environment> environmentMap = new HashMap<>();
+    private Map<String, io.gravitee.repository.management.model.Organization> organizationMap = new HashMap<>();
 
     @Value("${services.sync.distributed:false}")
     protected boolean distributed;
@@ -378,6 +385,7 @@ public class SyncManager {
                                 api.setEnabled(eventPayload.getLifecycleState() == LifecycleState.STARTED);
                                 api.setDeployedAt(eventPayload.getDeployedAt());
 
+                                enhanceWithOrgAndEnv(eventPayload.getEnvironmentId(), api);
                                 enhanceWithData(api);
 
                                 apiManager.register(api);
@@ -504,6 +512,44 @@ public class SyncManager {
             }
         } catch (TechnicalException te) {
             logger.error("Unexpected error while adding plan to the API: {} [{}]", definition.getName(), definition.getId(), te);
+        }
+    }
+
+    private void enhanceWithOrgAndEnv(String environmentId, Api definition) {
+        final Environment apiEnv = environmentMap.computeIfAbsent(
+            environmentId,
+            envId -> {
+                try {
+                    final Environment environment = environmentRepository.findById(envId).get();
+
+                    organizationMap.computeIfAbsent(
+                        environment.getOrganizationId(),
+                        orgId -> {
+                            try {
+                                return organizationRepository.findById(orgId).get();
+                            } catch (Exception e) {
+                                return null;
+                            }
+                        }
+                    );
+
+                    return environment;
+                } catch (Exception e) {
+                    return null;
+                }
+            }
+        );
+
+        if (apiEnv != null) {
+            definition.setEnvironmentId(apiEnv.getId());
+            definition.setEnvironmentHrid(apiEnv.getHrids().stream().findFirst().get());
+
+            final io.gravitee.repository.management.model.Organization apiOrg = organizationMap.get(apiEnv.getOrganizationId());
+
+            if (apiOrg != null) {
+                definition.setOrganizationId(apiOrg.getId());
+                definition.setOrganizationHrid(apiOrg.getHrids().stream().findFirst().get());
+            }
         }
     }
 

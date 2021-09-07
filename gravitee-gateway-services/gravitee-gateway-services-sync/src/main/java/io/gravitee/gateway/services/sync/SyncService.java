@@ -23,6 +23,7 @@ import io.gravitee.gateway.services.sync.apikeys.ApiKeysCacheService;
 import io.gravitee.gateway.services.sync.handler.SyncHandler;
 import io.gravitee.gateway.services.sync.healthcheck.ApiSyncProbe;
 import io.gravitee.gateway.services.sync.subscriptions.SubscriptionsCacheService;
+import io.gravitee.node.api.Node;
 import io.gravitee.node.api.healthcheck.ProbeManager;
 import io.gravitee.repository.exceptions.TechnicalException;
 import io.gravitee.repository.management.api.EnvironmentRepository;
@@ -30,10 +31,7 @@ import io.gravitee.repository.management.api.OrganizationRepository;
 import io.gravitee.repository.management.model.Environment;
 import io.gravitee.repository.management.model.Organization;
 import io.vertx.ext.web.Router;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ScheduledFuture;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -93,15 +91,7 @@ public class SyncService extends AbstractService implements Runnable {
     private ApiSyncProbe apiSyncProbe;
 
     @Autowired
-    private EnvironmentRepository environmentRepository;
-
-    @Autowired
-    private OrganizationRepository organizationRepository;
-
-    @Autowired
-    private GatewayConfiguration configuration;
-
-    private Set<Environment> environments;
+    private Node node;
 
     private ScheduledFuture<?> schedule;
 
@@ -112,8 +102,6 @@ public class SyncService extends AbstractService implements Runnable {
                 super.doStart();
 
                 logger.info("Sync service has been initialized with cron [{}]", cronTrigger);
-
-                this.environments = getTargetedEnvironments();
 
                 probeManager.register(this.apiSyncProbe);
 
@@ -154,8 +142,7 @@ public class SyncService extends AbstractService implements Runnable {
 
     @Override
     public void run() {
-        List<String> environmentsIds = environments.stream().map(Environment::getId).collect(Collectors.toList());
-        syncStateManager.refresh(environmentsIds);
+        syncStateManager.refresh(new ArrayList<>((Set<String>) node.metadata().get(Node.META_ENVIRONMENTS)));
     }
 
     public boolean isAllApisSync() {
@@ -165,54 +152,5 @@ public class SyncService extends AbstractService implements Runnable {
     @Override
     protected String name() {
         return "Gateway Sync Service";
-    }
-
-    private Set<Environment> getTargetedEnvironments() throws TechnicalException {
-        final Optional<List<String>> optOrganizationsList = configuration.organizations();
-        final Optional<List<String>> optEnvironmentsList = configuration.environments();
-
-        Set<String> organizationsIds = new HashSet<>();
-        Set<String> environmentsHrids = new HashSet<>();
-
-        if (optOrganizationsList.isPresent()) {
-            List<String> organizationsHrids = optOrganizationsList.get();
-            final Set<Organization> organizations = organizationRepository.findByHrids(new HashSet<>(organizationsHrids));
-            organizationsIds = organizations.stream().map(Organization::getId).collect(Collectors.toSet());
-
-            checkOrganizations(organizationsHrids, organizations);
-        }
-
-        if (optEnvironmentsList.isPresent()) {
-            environmentsHrids = new HashSet<>(optEnvironmentsList.get());
-        }
-
-        Set<Environment> environments = environmentRepository.findByOrganizationsAndHrids(organizationsIds, environmentsHrids);
-
-        checkEnvironments(environmentsHrids, environments);
-
-        return environments;
-    }
-
-    private void checkOrganizations(List<String> organizationsHrids, Set<Organization> organizations) {
-        if (organizationsHrids.size() != organizations.size()) {
-            final Set<String> hrids = new HashSet<>(organizationsHrids);
-            final Set<String> returnedHrids = organizations.stream().flatMap(org -> org.getHrids().stream()).collect(Collectors.toSet());
-            hrids.removeAll(returnedHrids);
-            logger.warn("No organization found for hrids {}", hrids);
-        }
-    }
-
-    private void checkEnvironments(Set<String> environmentsHrids, Set<Environment> environments) {
-        final Set<String> returnedHrids = environments
-            .stream()
-            .flatMap(env -> env.getHrids().stream())
-            .filter(environmentsHrids::contains)
-            .collect(Collectors.toSet());
-
-        if (environmentsHrids.size() != returnedHrids.size()) {
-            final Set<String> hrids = new HashSet<>(environmentsHrids);
-            hrids.removeAll(returnedHrids);
-            logger.warn("No environment found for hrids {}", hrids);
-        }
     }
 }
