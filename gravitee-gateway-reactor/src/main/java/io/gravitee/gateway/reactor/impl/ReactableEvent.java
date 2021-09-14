@@ -17,7 +17,6 @@ package io.gravitee.gateway.reactor.impl;
 
 import io.gravitee.gateway.reactor.Reactable;
 import io.gravitee.gateway.reactor.handler.Entrypoint;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
