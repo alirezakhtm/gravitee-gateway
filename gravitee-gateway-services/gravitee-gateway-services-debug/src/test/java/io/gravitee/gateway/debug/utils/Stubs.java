@@ -17,7 +17,7 @@ package io.gravitee.gateway.debug.utils;
 
 import io.gravitee.definition.model.Proxy;
 import io.gravitee.definition.model.VirtualHost;
-import io.gravitee.gateway.debug.handler.definition.DebugApi;
+import io.gravitee.gateway.debug.definition.DebugApi;
 import io.gravitee.gateway.reactor.Reactable;
 import io.gravitee.gateway.reactor.ReactorEvent;
 import io.gravitee.repository.management.model.Event;
